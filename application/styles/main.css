@@ -79,6 +79,15 @@ tr:hover {
     border-radius: 5px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     overflow-y: auto;
+    display: flex;
+    
+}
+.log-area #logContent {
+    flex: 1;
+}
+.log-area #infoWorker {
+    width: 400px;
+    background-color: #5d5d5d;
 }
 
 /* Status indicators */
@@ -110,4 +119,12 @@ tr:hover {
 .delete-button {
     background-color: #dc3545;
     color: white;
+}
+.link-url {
+    direction: rtl;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 250px;
 }

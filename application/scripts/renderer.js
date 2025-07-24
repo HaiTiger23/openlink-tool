@@ -5,7 +5,7 @@ if (!window.electronAPI) {
 
 const { checkLink, checkMultipleLinks, openFile, saveFile, readFile, saveToFile } = window.electronAPI;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // DOM Elements
     const selectAllBtn = document.getElementById('selectAll');
     const deselectAllBtn = document.getElementById('deselectAll');
@@ -31,12 +31,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const createTableRow = (link) => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td><input type="checkbox" ${link.active ? 'checked' : ''}></td>
+            <td><input class="active-checkbox" data-url="${link.url}"  type="checkbox" ${link.active ? 'checked' : ''}></td>
             <td><button class="action-button check-button">Đổi</button></td>
             <td><button class="action-button delete-button">Xóa</button></td>
-            <td>${link.url}</td>
+            <td class="link-url">${link.url}</td>
             <td class="status-${link.status}">${link.statusText}</td>
             <td>${link.time || ''}</td>
+            <td>${link.old_ip || ''}</td>
+            <td>${link.new_ip || ''}</td>
         `;
         return row;
     };
@@ -46,6 +48,16 @@ document.addEventListener('DOMContentLoaded', () => {
         tbody.innerHTML = '';
         links.forEach(link => {
             tbody.appendChild(createTableRow(link));
+        });
+        const activeCheckboxes = tbody.querySelectorAll('.active-checkbox');
+        activeCheckboxes.forEach(checkbox => {
+            checkbox.removeEventListener('change', () => {});
+        });
+        activeCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const url = checkbox.getAttribute('data-url');
+                links.find(link => link.url === url).active = checkbox.checked;
+            });
         });
     };
 
@@ -95,6 +107,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 link.status = result.status;
                 link.statusText = result.statusText;
                 link.time = result.time;
+                link.old_ip = result.old_ip || '';
+                link.new_ip = result.new_ip || '';
             });
 
             updateTable();
@@ -122,7 +136,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             active: false,
                             status: 'pending',
                             statusText: 'Chưa kiểm tra',
-                            time: ''
+                            time: '',
+                            old_ip: '',
+                            new_ip: ''
                         });
                     }
                 }
@@ -140,16 +156,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (filePath) {
                 const data = links.map(link => ({
                     url: link.url,
-                    status: link.statusText,
-                    time: link.time
+                    old_ip: link.old_ip || '',
+                    new_ip: link.new_ip || ''
                 }));
-                
+
                 if (filePath.endsWith('.csv')) {
-                    const csv = ['URL,Trạng thái,Thời gian'];
+                    const csv = ['URL,Trạng thái,Thời gian,IP hình thị trước,IP hình thị sau'];
                     data.forEach(row => {
-                        csv.push(`${row.url},${row.status},${row.time}`);
+                        csv.push(`${row.url},${row.status},${row.time},${row.old_ip},${row.new_ip}`);
                     });
                     await saveToFile(filePath, csv.join('\n'));
+                } else if (filePath.endsWith('.txt')) {
+                    const txt = data.map(row => `${row.url}|${row.old_ip}|${row.new_ip}`).join('\n');
+                    await saveToFile(filePath, txt);
                 } else {
                     await saveToFile(filePath, JSON.stringify(data, null, 2));
                 }
@@ -182,9 +201,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateTable();
                 
                 const result = await checkLink(link.url);
+                console.log("Kết quả", result);
+                
                 link.status = result.status;
                 link.statusText = result.statusText;
                 link.time = result.time;
+                link.old_ip = result.old_ip || '';
+                link.new_ip = result.new_ip || '';
                 updateTable();
                 addLog(`Kiểm tra xong: ${link.url} - ${link.statusText}`);
             } catch (error) {
@@ -237,11 +260,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add sample data for testing
     links.push({
-        url: 'https://example.com',
+        url: 'http://nguyendinhhao2801.duckdns.org:8002/fnewip?prass=bTdnnPg4e&port=10001',
         active: false,
         status: 'pending',
         statusText: 'Chưa kiểm tra',
         time: ''
     });
     updateTable();
+
+    // Hiển thị thông tin Puppeteer Cluster (tự động thử lại nếu chưa khởi tạo)
+    async function showClusterInfo() {
+        const infoDiv = document.getElementById('infoWorker');
+        if (window.electronAPI && window.electronAPI.getClusterInfo) {
+            try {
+                const info = await window.electronAPI.getClusterInfo();
+                infoDiv.innerHTML = `
+                    <b>Cluster Puppeteer:</b><br>
+                    Số worker tối đa: ${info.maxConcurrency}<br>
+                    Đang chạy: ${info.currentlyRunning}<br>
+                    Đang chờ: ${info.queueLength}<br>
+                    Trạng thái: ${info.status}
+                `;
+            } catch (err) {
+                if (err.message.includes('Cluster chưa khởi tạo')) {
+                    infoDiv.innerHTML = `<span style='color:orange'>Đang khởi tạo Cluster...</span>`;
+                } else {
+                    infoDiv.innerHTML = `<span style='color:red'>Không lấy được thông tin cluster: ${err.message}</span>`;
+                }
+            }
+            setTimeout(showClusterInfo, 500);
+        } else {
+            infoDiv.innerHTML = '<i>Không hỗ trợ lấy thông tin cluster</i>';
+        }
+    }
+    showClusterInfo();
 });

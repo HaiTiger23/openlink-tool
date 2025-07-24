@@ -23,7 +23,7 @@
 2. Tạo CSS styles
 3. Implement basic interactions
 
-## 4. Phát triển chức năng
+## 4. Phát triển chức năng ✅
 1. Setup Electron app
 2. Implement Link Checker
 3. Implement Proxy Manager

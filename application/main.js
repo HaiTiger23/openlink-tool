@@ -23,7 +23,7 @@ app.whenReady().then(async () => {
   
   // Khởi tạo Link Checker
   await linkChecker.initialize({
-    maxConcurrency: 2
+    maxConcurrency: 10
   });
 
   app.on('activate', () => {
@@ -68,6 +68,24 @@ ipcMain.handle('proxy:set', async (event, proxyConfig) => {
   return false;
 });
 
+// Cluster info handler
+ipcMain.handle('cluster:getInfo', async () => {
+  if (!linkChecker.cluster) {
+    throw new Error('Cluster chưa khởi tạo');
+  }
+  try {
+    const cluster = linkChecker.cluster;
+    return {
+      maxConcurrency: cluster.options.maxConcurrency,
+      currentlyRunning: cluster.workers && cluster.workers.length ? cluster.workers.filter(w => w.isBusy).length : 0,
+      queueLength: cluster.queue ? cluster.queue.length : 0,
+      status: cluster.isClosed ? 'Đã đóng' : 'Đang chạy'
+    };
+  } catch (err) {
+    throw new Error('Không lấy được thông tin cluster: ' + err.message);
+  }
+});
+
 // File operation handlers
 ipcMain.handle('dialog:openFile', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog({
@@ -84,7 +102,7 @@ ipcMain.handle('dialog:openFile', async () => {
 ipcMain.handle('dialog:saveFile', async () => {
   const { canceled, filePath } = await dialog.showSaveDialog({
     filters: [
-      { name: 'CSV', extensions: ['csv'] },
+      { name: 'Text', extensions: ['txt'] },
       { name: 'JSON', extensions: ['json'] }
     ]
   });

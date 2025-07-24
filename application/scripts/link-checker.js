@@ -10,7 +10,7 @@ class LinkChecker {
 
     async initialize(options = {}) {
         const browserOptions = {
-            headless: false, // Set to false để hiển thị browser
+            headless: "new", // Set to false để hiển thị browser
             defaultViewport: null, // Cho phép cửa sổ browser có kích thước tự động
             args: [
                 '--no-sandbox',
@@ -19,20 +19,16 @@ class LinkChecker {
             ]
         };
 
-        if (this.proxyConfig) {
-            browserOptions.args.push(`--proxy-server=${this.proxyConfig}`);
-        }
-
         // Khởi tạo browser cho single link checking
         this.browser = await puppeteer.launch(browserOptions);
 
         // Tính toán số worker tối ưu
-        const maxWorkers = Math.min(10, navigator.hardwareConcurrency || 4); // Tối đa 10 worker hoặc theo số CPU
+        const maxWorkers = 10; // Tối đa 10 worker hoặc theo số CPU
 
         // Khởi tạo cluster cho multiple link checking
         this.cluster = await Cluster.launch({
             concurrency: Cluster.CONCURRENCY_PAGE, // Sử dụng PAGE thay vì CONTEXT để tối ưu hóa bộ nhớ
-            maxConcurrency: options.maxConcurrency || maxWorkers,
+            maxConcurrency: maxWorkers,
             puppeteerOptions: browserOptions,
             monitor: true, // Bật monitor để theo dõi tiến trình
             timeout: 30000, // Timeout cho mỗi task
@@ -49,19 +45,56 @@ class LinkChecker {
     async checkSingleLink(page, url) {
         const startTime = Date.now();
         try {
-            await page.goto(url, { 
+            await page.goto(url, {
                 waitUntil: 'networkidle2',
-                timeout: 30000 
+                timeout: 30000
             });
-            
-            const html = await page.content();
-            const hasSuccess = html.includes("New IP"); // Kiểm tra nội dung HTML để xác định thành công
-            
+
+            let isLoaded = false;
+            let timeCheck = 0;
+            do {
+                isLoaded = await page.evaluate(() => {
+                    const isLoaded = document.querySelector('#loading');
+                    return isLoaded ? isLoaded.style.display === 'none' : false;
+                });
+                console.log('Waiting for page to load...');
+                await this.sleep(1000); // Chờ 1 giây trước khi kiểm tra lại
+                timeCheck++;;
+            } while (!isLoaded && timeCheck < 20);
+            let old_ip = await page.evaluate(() => {
+                const old_ip = document.querySelector('#oldIp');
+                return old_ip ? old_ip.textContent.trim() : null;
+            }
+            );
+            let new_ip = await page.evaluate(() => {
+                const new_ip = document.querySelector('#result');
+                return new_ip ? new_ip.textContent.trim() : null;
+            }
+            );
+            console.log('New IP:', new_ip);
+            console.log('Old IP:', old_ip);
+            if (!new_ip || !old_ip) {
+                return {
+                    url,
+                    success: false,
+                    status: 'error',
+                    statusText: '❌ Không tìm thấy thông tin IP',
+                    old_ip: old_ip || 'Không tìm thấy',
+                    new_ip: new_ip || 'Không tìm thấy',
+                    time: ((Date.now() - startTime) / 1000).toFixed(2)
+                };
+            }
+            new_ip = new_ip.split(':')[1].trim();
+            old_ip = old_ip.split(':')[1].trim();
+            const hasSuccess = old_ip !== new_ip; // Kiểm tra nội dung HTML để xác định thành công
+
             return {
                 url,
                 success: hasSuccess,
                 status: hasSuccess ? 'success' : 'error',
                 statusText: hasSuccess ? '✅ Thành công' : '❌ Không tìm thấy',
+                old_ip: old_ip,
+                new_ip: new_ip,
                 time: ((Date.now() - startTime) / 1000).toFixed(2)
             };
         } catch (error) {
@@ -96,6 +129,9 @@ class LinkChecker {
         if (this.browser) {
             await this.browser.close();
         }
+    }
+    async sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 }
 

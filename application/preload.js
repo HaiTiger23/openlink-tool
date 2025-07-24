@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
+    getClusterInfo: async () => ipcRenderer.invoke('cluster:getInfo'),
     // File operations
     openFile: async () => ipcRenderer.invoke('dialog:openFile'),
     saveFile: async () => ipcRenderer.invoke('dialog:saveFile'),
