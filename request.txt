@@ -1,0 +1,58 @@
+1. Mục tiêu ứng dụng
+Ứng dụng desktop giúp người dùng:
+Nhập hoặc nạp danh sách link (URL).
+Kiểm tra trạng thái từng link bằng cách load nội dung web, và xác định xem trang đó có chứa từ khóa "thành công" hay không.
+Hiển thị kết quả kiểm tra theo từng dòng, cho phép chạy đồng thời nhiều link.
+Giao diện giống ứng dụng quản lý API key (xem hình đính kèm).
+
+2. Công nghệ sử dụng
+Thành phần	Công nghệ
+Giao diện người dùng	Electron + HTML/CSS/JS
+Logic xử lý	Node.js + Puppeteer
+Tương tác đồng thời	puppeteer-cluster (tuỳ chọn)
+
+3. Giao diện chính
+Bố cục:
+Thanh công cụ (Quick Menu):
+Chọn Tất cả, Bỏ chọn Tất cả, Xóa, Đổi IP, Nạp Link từ File, Lưu vào File, Làm lại
+Bảng dữ liệu chính với các cột:
+| Kích hoạt | Đổi | Xóa | Link | Trạng thái | Thời gian (giây) |
+Khu vực log / info (dưới cùng)
+Chức năng mỗi dòng:
+Check "Kích hoạt" để xác định link nào sẽ được xử lý.
+Nút “Đổi”: chạy kiểm tra riêng cho link đó.
+Nút “Xóa”: xoá dòng khỏi danh sách.
+Cột “Trạng thái”: hiển thị kết quả kiểm tra (✅ Thành công / ❌ Không tìm thấy / Lỗi).
+Cột “Thời gian”: thời gian xử lý link đó.
+
+4. Luồng hoạt động
+Người dùng thao tác:
+Nhập tay hoặc bấm “Nạp Link từ File” (file .txt, mỗi dòng là một link).
+Danh sách hiển thị ở bảng.
+
+Có thể bấm:
+“Đổi” từng dòng → app sẽ dùng Puppeteer để load link đó, kiểm tra nội dung trang.
+“Đổi IP” (tuỳ chọn nếu muốn gán proxy).
+“Chọn Tất cả” rồi xử lý hàng loạt.
+Kết quả trạng thái hiển thị trực tiếp.
+Có thể lưu danh sách vào file CSV hoặc JSON nếu cần.
+5. Logic kiểm tra link (đối với từng dòng)
+await page.goto(link, { waitUntil: 'networkidle2' });
+const html = await page.content();
+const hasSuccess = html.includes("thành công");
+
+6. Tùy chọn nâng cao
+Sử dụng puppeteer-cluster để kiểm tra nhiều link đồng thời, giới hạn số lượng tab mở cùng lúc.
+Hỗ trợ đổi IP qua proxy nếu cần, cấu hình per link hoặc toàn bộ.
+
+7. Output có thể lưu:
+File .csv hoặc .json chứa danh sách link + trạng thái + thời gian xử lý.
+
+8. Yêu cầu môi trường
+Node.js >= 18
+Electron
+Puppeteer / Puppeteer-cluster
+
+9. Định nghĩa từ khóa kiểm tra
+Từ khóa xác định thành công là: "thành công" (có thể tùy chỉnh sau này)
+
