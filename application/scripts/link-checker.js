@@ -10,7 +10,7 @@ class LinkChecker {
 
     async initialize(options = {}) {
         const browserOptions = {
-            headless: "new", // Set to false để hiển thị browser
+            headless: false, // Set to false để hiển thị browser
             defaultViewport: null, // Cho phép cửa sổ browser có kích thước tự động
             args: [
                 '--no-sandbox',
@@ -23,7 +23,7 @@ class LinkChecker {
         this.browser = await puppeteer.launch(browserOptions);
 
         // Tính toán số worker tối ưu
-        const maxWorkers = 10; // Tối đa 10 worker hoặc theo số CPU
+        const maxWorkers = 5; // Tối đa 10 worker hoặc theo số CPU
 
         // Khởi tạo cluster cho multiple link checking
         this.cluster = await Cluster.launch({
@@ -31,7 +31,7 @@ class LinkChecker {
             maxConcurrency: maxWorkers,
             puppeteerOptions: browserOptions,
             monitor: true, // Bật monitor để theo dõi tiến trình
-            timeout: 30000, // Timeout cho mỗi task
+            timeout: 120000, // Timeout cho mỗi task
             retryLimit: 1, // Số lần thử lại nếu fail
             retryDelay: 1000, // Delay giữa các lần thử lại
         });
@@ -47,7 +47,7 @@ class LinkChecker {
         try {
             await page.goto(url, {
                 waitUntil: 'networkidle2',
-                timeout: 30000
+                timeout: 120000 // Tăng timeout lên 120 giây
             });
 
             let isLoaded = false;
@@ -57,10 +57,10 @@ class LinkChecker {
                     const isLoaded = document.querySelector('#loading');
                     return isLoaded ? isLoaded.style.display === 'none' : false;
                 });
-                console.log('Waiting for page to load...');
+                // console.log('Waiting for page to load...');
                 await this.sleep(1000); // Chờ 1 giây trước khi kiểm tra lại
                 timeCheck++;;
-            } while (!isLoaded && timeCheck < 20);
+            } while (!isLoaded && timeCheck < 60); // Tăng thời gian chờ lên 60 giây
             let old_ip = await page.evaluate(() => {
                 const old_ip = document.querySelector('#oldIp');
                 return old_ip ? old_ip.textContent.trim() : null;
@@ -71,8 +71,7 @@ class LinkChecker {
                 return new_ip ? new_ip.textContent.trim() : null;
             }
             );
-            console.log('New IP:', new_ip);
-            console.log('Old IP:', old_ip);
+        console.log("url checked:", url, "old_ip:", old_ip, "new_ip:", new_ip);
             if (!new_ip || !old_ip) {
                 return {
                     url,

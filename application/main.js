@@ -23,7 +23,7 @@ app.whenReady().then(async () => {
   
   // Khởi tạo Link Checker
   await linkChecker.initialize({
-    maxConcurrency: 10
+    maxConcurrency: 5
   });
 
   app.on('activate', () => {
@@ -42,14 +42,18 @@ app.on('window-all-closed', async () => {
 
 // Link checking handlers
 ipcMain.handle('link:check', async (event, url) => {
-  const page = await linkChecker.browser.newPage();
   try {
-    const result = await linkChecker.checkSingleLink(page, url);
-    await page.close();
+    const result = await linkChecker.cluster.execute(url);
     return result;
   } catch (error) {
-    await page.close();
-    throw error;
+   
+    return {
+      url,
+      success: false,
+      status: 'error',
+      statusText: `❌ Lỗi: ${error.message}`,
+      time: '0.00'
+    };
   }
 });
 

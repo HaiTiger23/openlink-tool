@@ -91,37 +91,54 @@ document.addEventListener('DOMContentLoaded', async () => {
         addLog(`Bắt đầu kiểm tra ${selectedLinks.length} link đã chọn...`);
         
         // Update status to checking
-        selectedLinks.forEach(link => {
-            link.status = 'checking';
-            link.statusText = '⏳ Đang kiểm tra...';
-        });
-        updateTable();
-
-        try {
-            // Process links in parallel using checkMultipleLinks
-            const results = await checkMultipleLinks(selectedLinks.map(link => link.url));
-            
-            // Update results
-            results.forEach((result, index) => {
-                const link = selectedLinks[index];
+        selectedLinks.forEach( async (link) => {
+             try {
+                link.status = 'checking';
+                link.statusText = '⏳ Đang kiểm tra...';
+                updateTable();
+                
+                const result = await checkLink(link.url);
+                console.log("Kết quả", result);
+                
                 link.status = result.status;
                 link.statusText = result.statusText;
                 link.time = result.time;
                 link.old_ip = result.old_ip || '';
                 link.new_ip = result.new_ip || '';
-            });
+                updateTable();
+                addLog(`Kiểm tra xong: ${link.url} - ${link.statusText}`);
+            } catch (error) {
+                links[index].status = 'error';
+                links[index].statusText = `❌ Lỗi: ${error.message}`;
+                updateTable();
+                addLog(`Lỗi khi kiểm tra: ${error.message}`);
+            }
+        });
+        // try {
+        //     // Process links in parallel using checkMultipleLinks
+        //     const results = await checkMultipleLinks(selectedLinks.map(link => link.url));
+            
+        //     // Update results
+        //     results.forEach((result, index) => {
+        //         const link = selectedLinks[index];
+        //         link.status = result.status;
+        //         link.statusText = result.statusText;
+        //         link.time = result.time;
+        //         link.old_ip = result.old_ip || '';
+        //         link.new_ip = result.new_ip || '';
+        //     });
 
-            updateTable();
-            addLog(`Đã hoàn thành kiểm tra ${selectedLinks.length} link`);
-        } catch (error) {
-            // Update status to error for all selected links
-            selectedLinks.forEach(link => {
-                link.status = 'error';
-                link.statusText = '❌ Lỗi khi kiểm tra';
-            });
-            updateTable();
-            addLog(`Lỗi khi kiểm tra hàng loạt: ${error.message}`);
-        }
+        //     updateTable();
+        //     addLog(`Đã hoàn thành kiểm tra ${selectedLinks.length} link`);
+        // } catch (error) {
+        //     // Update status to error for all selected links
+        //     selectedLinks.forEach(link => {
+        //         link.status = 'error';
+        //         link.statusText = '❌ Lỗi khi kiểm tra';
+        //     });
+        //     updateTable();
+        //     addLog(`Lỗi khi kiểm tra hàng loạt: ${error.message}`);
+        // }
     });
 
     loadFileBtn.addEventListener('click', async () => {
