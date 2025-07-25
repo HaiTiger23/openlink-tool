@@ -16,6 +16,16 @@
             <button id="loadFile">Nạp Link từ File</button>
             <button id="saveFile">Lưu vào File</button>
             <button id="reset">Reset</button>
+            <div class="setting-group">
+                <label for="maxConcurrency">Số tiến trình tối đa:</label>
+                <input type="number" 
+                    id="maxConcurrency" 
+                    value="5" 
+                    min="1" 
+                    max="50"
+                    title="Giá trị từ 1-50">
+                <button id="saveSetting">Lưu</button>
+            </div>
         </div>
 
         <!-- Main Table -->
@@ -34,7 +44,8 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Dynamic content -->
+                    
+                    <!-- Rows will be dynamically added here -->
                 </tbody>
             </table>
         </div>

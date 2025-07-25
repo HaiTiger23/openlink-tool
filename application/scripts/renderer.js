@@ -17,9 +17,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     const linkTable = document.getElementById('linkTable');
     const logContent = document.getElementById('logContent');
     const tbody = linkTable.querySelector('tbody');
+    const maxConcurrencyInput = document.getElementById('maxConcurrency');
+    const saveSettingBtn = document.getElementById('saveSetting');
+
+    // Sự kiện lưu số worker tối đa
+    saveSettingBtn.addEventListener('click', async () => {
+        const value = parseInt(maxConcurrencyInput.value, 10);
+        if (isNaN(value) || value < 1 || value > 50) {
+            addLog('Giá trị số tiến trình tối đa không hợp lệ (1-50)');
+            return;
+        }
+        const result = await window.electronAPI.setMaxConcurrency(value);
+        if (result.success) {
+            addLog(`Đã cập nhật số tiến trình tối đa: ${value}`);
+        } else {
+            addLog(`Không thể cập nhật: ${result.message || 'Lỗi không xác định'}`);
+        }
+    });
 
     // State management
     let links = [];
+    let currentConcurrency = 5;
 
     // Helper functions
     const addLog = (message) => {
@@ -31,9 +49,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const createTableRow = (link) => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td><input class="active-checkbox" data-url="${link.url}"  type="checkbox" ${link.active ? 'checked' : ''}></td>
-            <td><button class="action-button check-button">Đổi</button></td>
-            <td><button class="action-button delete-button">Xóa</button></td>
+            <td><input ${link.status === 'checking' ? 'disabled' : ''} class="active-checkbox" data-url="${link.url}"  type="checkbox" ${link.active ? 'checked' : ''}></td>
+            <td><button ${link.status === 'checking' ? 'disabled' : ''} class="action-button check-button">Đổi</button></td>
+            <td><button ${link.status === 'checking' ? 'disabled' : ''} class="action-button delete-button">Xóa</button></td>
             <td class="link-url">${link.url}</td>
             <td class="status-${link.status}">${link.statusText}</td>
             <td>${link.time || ''}</td>
@@ -60,6 +78,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
     };
+
+    function updateWorkerInfo() {
+        const infoWorker = document.getElementById('infoWorker');
+        infoWorker.textContent = `Số tiến trình đang chạy: ${activeWorkers}/${currentConcurrency}`;
+    }
 
     // Event listeners
     selectAllBtn.addEventListener('click', () => {
@@ -275,14 +298,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // Add sample data for testing
-    links.push({
-        url: 'http://nguyendinhhao2801.duckdns.org:8002/fnewip?prass=bTdnnPg4e&port=10001',
-        active: false,
-        status: 'pending',
-        statusText: 'Chưa kiểm tra',
-        time: ''
-    });
     updateTable();
 
     // Hiển thị thông tin Puppeteer Cluster (tự động thử lại nếu chưa khởi tạo)

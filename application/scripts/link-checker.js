@@ -10,7 +10,7 @@ class LinkChecker {
 
     async initialize(options = {}) {
         const browserOptions = {
-            headless: false, // Set to false để hiển thị browser
+            headless: "new", // Set to false để hiển thị browser
             defaultViewport: null, // Cho phép cửa sổ browser có kích thước tự động
             args: [
                 '--no-sandbox',
@@ -22,8 +22,8 @@ class LinkChecker {
         // Khởi tạo browser cho single link checking
         this.browser = await puppeteer.launch(browserOptions);
 
-        // Tính toán số worker tối ưu
-        const maxWorkers = 5; // Tối đa 10 worker hoặc theo số CPU
+        // Cho phép truyền số worker động qua options.maxConcurrency
+        const maxWorkers = typeof options.maxConcurrency === 'number' && options.maxConcurrency > 0 ? options.maxConcurrency : 5;
 
         // Khởi tạo cluster cho multiple link checking
         this.cluster = await Cluster.launch({

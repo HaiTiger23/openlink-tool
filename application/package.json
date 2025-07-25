@@ -11,10 +11,20 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "electron": "^37.2.4",
-    "electron-builder": "^26.0.12",
     "jest": "^30.0.5",
     "puppeteer": "^24.15.0",
     "puppeteer-cluster": "^0.24.0"
+  },
+  "devDependencies": {
+    "electron": "^37.2.4",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.hai_dev_2311.openlink",
+    "productName": "OpenLink",
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icons/icon.ico"
+    }
   }
 }

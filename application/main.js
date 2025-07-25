@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 const linkChecker = require('./scripts/link-checker');
@@ -8,6 +8,8 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    resizable: false,
+    maximizable: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -16,7 +18,31 @@ function createWindow() {
   });
 
   win.loadFile('index.html');
+
+  // Custom menu: Tác giả Hải Dev
+  const menuTemplate = [
+    {
+      label: 'Tác giả: Hải Dev',
+      click: () => {
+        shell.openExternal('https://www.facebook.com/haitiger23');
+      }
+    }
+  ];
+  const customMenu = Menu.buildFromTemplate(menuTemplate);
+  Menu.setApplicationMenu(customMenu);
+
+  // Chặn F5, Ctrl+R, F12
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F5' || (input.key.toLowerCase() === 'r' && input.control)) {
+      event.preventDefault();
+    }
+    if (input.key === 'F12') {
+      event.preventDefault();
+    }
+  });
 }
+
+
 
 app.whenReady().then(async () => {
   createWindow();
@@ -25,6 +51,24 @@ app.whenReady().then(async () => {
   await linkChecker.initialize({
     maxConcurrency: 5
   });
+let maxConcurrency = 5;
+
+ipcMain.handle('set-max-concurrency', async (event, value) => {
+    if (typeof value === 'number' && value > 0 && value <= 50) {
+        maxConcurrency = value;
+        // Khởi tạo lại cluster với maxConcurrency mới
+        await linkChecker.cleanup();
+        await linkChecker.initialize({ maxConcurrency });
+        return { success: true };
+    }
+    return { success: false, message: 'Giá trị không hợp lệ' };
+});
+
+// Khi app ready, khởi tạo cluster lần đầu
+app.whenReady().then(async () => {
+    await linkChecker.initialize({ maxConcurrency });
+    // ...existing code...
+});
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

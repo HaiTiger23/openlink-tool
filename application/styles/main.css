@@ -86,6 +86,7 @@ tr:hover {
     flex: 1;
 }
 .log-area #infoWorker {
+    display: none;
     width: 400px;
     background-color: #5d5d5d;
 }
@@ -127,4 +128,22 @@ tr:hover {
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 250px;
+}
+
+/* Settings group styles */
+.setting-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 12px;
+}
+
+.setting-group input[type="number"] {
+    width: 60px;
+    padding: 4px;
+}
+
+.setting-group label {
+    font-size: 14px;
+    white-space: nowrap;
 }
