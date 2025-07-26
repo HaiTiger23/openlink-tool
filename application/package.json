@@ -6,11 +6,13 @@
   "scripts": {
     "start": "electron .",
     "test": "jest",
-    "build": "electron-builder"
+    "build": "electron-builder",
+    "postinstall": "puppeteer install"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "chrome-launcher": "^1.2.0",
     "jest": "^30.0.5",
     "puppeteer": "^24.15.0",
     "puppeteer-cluster": "^0.24.0"
@@ -25,6 +27,10 @@
     "win": {
       "target": "nsis",
       "icon": "assets/icons/icon.ico"
-    }
+    },
+    "files": [
+      "**/*",
+      "node_modules/puppeteer/.local-chromium/**/*"
+    ]
   }
 }

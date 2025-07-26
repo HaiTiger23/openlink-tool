@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
+const chromeLauncher = require('chrome-launcher');
 const path = require('path');
 const fs = require('fs').promises;
 const linkChecker = require('./scripts/link-checker');
@@ -45,30 +46,47 @@ function createWindow() {
 
 
 app.whenReady().then(async () => {
+  // Kiểm tra Chrome/Chromium khi app khởi động
+  const chromePaths = chromeLauncher.Launcher.getInstallations();
+  if (!chromePaths || chromePaths.length === 0) {
+    dialog.showMessageBoxSync({
+      type: 'error',
+      title: 'Thiếu Chrome/Chromium',
+      message: 'Không tìm thấy Chrome hoặc Chromium trên máy.\n\nVui lòng tải và cài đặt Google Chrome để sử dụng phần mềm!\n\nTải tại: https://www.google.com/chrome/'
+    });
+    app.quit();
+    return;
+  } else {
+    dialog.showMessageBoxSync({
+      type: 'info',
+      title: 'Chrome/Chromium đã tìm thấy',
+      message: 'Chrome hoặc Chromium đã tìm thấy trên máy.'
+    });
+  }
   createWindow();
-  
+
   // Khởi tạo Link Checker
   await linkChecker.initialize({
     maxConcurrency: 5
   });
-let maxConcurrency = 5;
+  let maxConcurrency = 5;
 
-ipcMain.handle('set-max-concurrency', async (event, value) => {
+  ipcMain.handle('set-max-concurrency', async (event, value) => {
     if (typeof value === 'number' && value > 0 && value <= 50) {
-        maxConcurrency = value;
-        // Khởi tạo lại cluster với maxConcurrency mới
-        await linkChecker.cleanup();
-        await linkChecker.initialize({ maxConcurrency });
-        return { success: true };
+      maxConcurrency = value;
+      // Khởi tạo lại cluster với maxConcurrency mới
+      await linkChecker.cleanup();
+      await linkChecker.initialize({ maxConcurrency });
+      return { success: true };
     }
     return { success: false, message: 'Giá trị không hợp lệ' };
-});
+  });
 
-// Khi app ready, khởi tạo cluster lần đầu
-app.whenReady().then(async () => {
+  // Khi app ready, khởi tạo cluster lần đầu
+  app.whenReady().then(async () => {
     await linkChecker.initialize({ maxConcurrency });
     // ...existing code...
-});
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -90,12 +108,13 @@ ipcMain.handle('link:check', async (event, url) => {
     const result = await linkChecker.cluster.execute(url);
     return result;
   } catch (error) {
-   
+
     return {
       url,
       success: false,
       status: 'error',
       statusText: `❌ Lỗi: ${error.message}`,
+      error: error,
       time: '0.00'
     };
   }

@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 link.old_ip = result.old_ip || '';
                 link.new_ip = result.new_ip || '';
                 updateTable();
-                addLog(`Kiểm tra xong: ${link.url} - ${link.statusText}`);
+                addLog(`Kiểm tra xong: ${link.url} - ${link.statusText} ${result.error ? ` - ${JSON.stringify(result.error)}` : ''}`);
             } catch (error) {
                 links[index].status = 'error';
                 links[index].statusText = `❌ Lỗi: ${error.message}`;
