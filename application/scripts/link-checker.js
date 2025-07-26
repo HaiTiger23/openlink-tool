@@ -85,8 +85,21 @@ class LinkChecker {
             }
             new_ip = new_ip.split(':')[1].trim();
             old_ip = old_ip.split(':')[1].trim();
+            
             const hasSuccess = old_ip !== new_ip; // Kiểm tra nội dung HTML để xác định thành công
-
+            // check new ip có phải dạng 1 ip không
+            const isIP = new_ip.match(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/);
+            if (!isIP) {
+                return {
+                    url,
+                    success: false,
+                    status: 'error',
+                    statusText: '❌ Không tìm thấy thông tin IP',
+                    old_ip: old_ip,
+                    new_ip: new_ip,
+                    time: ((Date.now() - startTime) / 1000).toFixed(2)
+                };
+            }
             return {
                 url,
                 success: hasSuccess,

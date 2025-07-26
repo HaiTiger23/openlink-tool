@@ -56,12 +56,6 @@ app.whenReady().then(async () => {
     });
     app.quit();
     return;
-  } else {
-    dialog.showMessageBoxSync({
-      type: 'info',
-      title: 'Chrome/Chromium đã tìm thấy',
-      message: 'Chrome hoặc Chromium đã tìm thấy trên máy.'
-    });
   }
   createWindow();
 
