@@ -61,9 +61,9 @@ app.whenReady().then(async () => {
 
   // Khởi tạo Link Checker
   await linkChecker.initialize({
-    maxConcurrency: 5
+    maxConcurrency: 10
   });
-  let maxConcurrency = 5;
+  let maxConcurrency = 10;
 
   ipcMain.handle('set-max-concurrency', async (event, value) => {
     if (typeof value === 'number' && value > 0 && value <= 50) {
@@ -132,7 +132,12 @@ ipcMain.handle('proxy:set', async (event, proxyConfig) => {
 // Cluster info handler
 ipcMain.handle('cluster:getInfo', async () => {
   if (!linkChecker.cluster) {
-    throw new Error('Cluster chưa khởi tạo');
+    return {
+      maxConcurrency: 0,
+      currentlyRunning: 0,
+      queueLength: 0,
+      status: 'Chưa khởi tạo'
+    };
   }
   try {
     const cluster = linkChecker.cluster;

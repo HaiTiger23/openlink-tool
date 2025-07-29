@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 const { Cluster } = require('puppeteer-cluster');
 
 class LinkChecker {
@@ -10,21 +10,31 @@ class LinkChecker {
 
     async initialize(options = {}) {
         const browserOptions = {
-            headless: "new", // Set to false để hiển thị browser
-            defaultViewport: null, // Cho phép cửa sổ browser có kích thước tự động
+            executablePath: "D:\\tool\\openlink\\application\\chrome-headless-shell\\win64-138.0.7204.168\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+            headless: false,           // Chạy headless
+            defaultViewport: null,     // Không fix viewport
+
             args: [
+                '--window-size=200,500',
                 '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--start-maximized' // Maximize cửa sổ browser
+                '--disable-setuid-sandbox',    // Bỏ sandbox để tránh lỗi quyền
+                '--disable-gpu',               // Bỏ GPU
+                '--disable-extensions',        // Không load extension
+                '--disable-background-networking', // Chặn kết nối nền
+                '--disable-sync',              // Không sync
+                '--disable-default-apps',      // Không load app mặc định
+                '--disable-translate',         // Bỏ Google Translate
+                '--hide-scrollbars',           // Ẩn scrollbar (tăng nhẹ hiệu năng)
+                '--mute-audio',                // Tắt audio
+                '--disable-dev-shm-usage',     // Fix lỗi bộ nhớ trên Linux/Docker
             ]
         };
 
-        // Khởi tạo browser cho single link checking
-        this.browser = await puppeteer.launch(browserOptions);
-
         // Cho phép truyền số worker động qua options.maxConcurrency
         const maxWorkers = typeof options.maxConcurrency === 'number' && options.maxConcurrency > 0 ? options.maxConcurrency : 5;
-
+        if(this.cluster){
+            await this.cluster.close();
+        }
         // Khởi tạo cluster cho multiple link checking
         this.cluster = await Cluster.launch({
             concurrency: Cluster.CONCURRENCY_PAGE, // Sử dụng PAGE thay vì CONTEXT để tối ưu hóa bộ nhớ
@@ -37,7 +47,7 @@ class LinkChecker {
         });
 
         // Định nghĩa task cho cluster
-        await this.cluster.task(async ({ page, data: url }) => {
+        await this.cluster.task(async ({ page, data: url }) => {                   
             return await this.checkSingleLink(page, url);
         });
     }

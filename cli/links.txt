@@ -1,7 +1,0 @@
-http://nguyendinhhao2801.duckdns.org:8002/fnewip?prass=bTdnnPg4e&port=10001
-http://nguyendinhhao2801.duckdns.org:8002/fnewip?prass=bTdnnPg4e&port=10002
-http://nguyendinhhao2801.duckdns.org:8002/fnewip?prass=bTdnnPg4e&port=10003
-http://nguyendinhhao2801.duckdns.org:8002/fnewip?prass=bTdnnPg4e&port=10004
-http://nguyendinhhao2801.duckdns.org:8002/fnewip?prass=bTdnnPg4e&port=10005
-http://nguyendinhhao2801.duckdns.org:8002/fnewip?prass=bTdnnPg4e&port=10006
-http://nguyendinhhao2801.duckdns.org:8002/fnewip?prass=bTdnnPg4e&port=10007

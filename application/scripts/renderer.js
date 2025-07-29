@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // State management
     let links = [];
-    let currentConcurrency = 5;
+    let currentConcurrency = 10;
 
     // Helper functions
     const addLog = (message) => {
