@@ -20,9 +20,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
         }
     },
 
-    checkMultipleLinks: async (links) => {
+    checkMultipleLinks: async (links, onProgress) => {
         try {
-            return await ipcRenderer.invoke('links:checkMultiple', links);
+            // Lắng nghe progress events nếu có callback
+            let progressHandler = null;
+            if (onProgress) {
+                progressHandler = (event, data) => {
+                    onProgress(data.result, data.index);
+                };
+                ipcRenderer.on('link:progress', progressHandler);
+            }
+            
+            const results = await ipcRenderer.invoke('links:checkMultiple', links);
+            
+            // Xóa listener sau khi hoàn thành
+            if (progressHandler) {
+                ipcRenderer.removeListener('link:progress', progressHandler);
+            }
+            
+            return results;
         } catch (error) {
             throw new Error(`Error checking multiple links: ${error.message}`);
         }

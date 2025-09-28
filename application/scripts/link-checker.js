@@ -1,4 +1,3 @@
-const puppeteer = require('puppeteer-core');
 const { Cluster } = require('puppeteer-cluster');
 
 class LinkChecker {
@@ -9,6 +8,7 @@ class LinkChecker {
     }
 
     async initialize(options = {}) {
+        console.log('LinkChecker.initialize nhận options:', options);
         const browserOptions = {
             // executablePath: "D:\\tool\\openlink\\application\\chrome-headless-shell\\win64-138.0.7204.168\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
             headless: false,           // Chạy headless
@@ -28,38 +28,101 @@ class LinkChecker {
                 '--mute-audio',                // Tắt audio
                 '--disable-dev-shm-usage',     // Fix lỗi bộ nhớ trên Linux/Docker
                 '--disable-web-security',      // Tắt web security để tránh CORS
-                '--disable-features=VizDisplayCompositor' // Tắt một số tính năng không cần thiết
+                '--disable-features=VizDisplayCompositor', // Tắt một số tính năng không cần thiết
+                '--disable-background-timer-throttling', // Tắt throttle timer
+                '--disable-renderer-backgrounding', // Tắt background rendering
+                '--disable-backgrounding-occluded-windows', // Tắt backgrounding
+                '--disable-ipc-flooding-protection', // Tắt IPC flooding protection
+                '--disable-hang-monitor', // Tắt hang monitor
+                '--disable-prompt-on-repost', // Tắt prompt on repost
+                '--disable-domain-reliability', // Tắt domain reliability
+                '--disable-component-extensions-with-background-pages', // Tắt component extensions
+                '--disable-client-side-phishing-detection', // Tắt phishing detection
+                '--disable-sync-preferences', // Tắt sync preferences
+                '--disable-features=TranslateUI', // Tắt translate UI
+                '--aggressive-cache-discard', // Aggressive cache discard
+                '--memory-pressure-off', // Tắt memory pressure
+                '--max_old_space_size=4096', // Tăng heap size
+                // Network throttling để giảm tải mạng
+                '--disable-background-networking', // Tắt background networking
+                '--disable-background-timer-throttling', // Tắt background timer
+                '--disable-renderer-backgrounding', // Tắt renderer backgrounding
+                '--disable-backgrounding-occluded-windows', // Tắt backgrounding occluded windows
+                '--disable-features=TranslateUI', // Tắt translate UI
+                '--disable-ipc-flooding-protection', // Tắt IPC flooding protection
+                '--disable-hang-monitor', // Tắt hang monitor
+                '--disable-prompt-on-repost', // Tắt prompt on repost
+                '--disable-domain-reliability', // Tắt domain reliability
+                '--disable-component-extensions-with-background-pages', // Tắt component extensions
+                '--disable-client-side-phishing-detection', // Tắt phishing detection
+                '--disable-sync-preferences', // Tắt sync preferences
+                '--disable-features=TranslateUI', // Tắt translate UI
+                '--aggressive-cache-discard', // Aggressive cache discard
+                '--memory-pressure-off', // Tắt memory pressure
+                '--max_old_space_size=4096' // Tăng heap size
             ]
         };
 
-        // Cho phép truyền số worker động qua options.maxConcurrency
+        // Cho phép truyền số tab đồng thời qua options.maxConcurrency
         const maxWorkers = typeof options.maxConcurrency === 'number' && options.maxConcurrency > 0 ? options.maxConcurrency : 5;
-        if(this.cluster){
+        console.log('LinkChecker sử dụng maxWorkers:', maxWorkers, 'từ options.maxConcurrency:', options.maxConcurrency);
+        if (this.cluster) {
             await this.cluster.close();
         }
-        // Khởi tạo cluster cho multiple link checking
+        // Khởi tạo cluster với số tab đồng thời từ bên ngoài
         this.cluster = await Cluster.launch({
             concurrency: Cluster.CONCURRENCY_PAGE, // Sử dụng PAGE thay vì CONTEXT để tối ưu hóa bộ nhớ
-            maxConcurrency: maxWorkers,
-            puppeteerOptions: browserOptions,
+            maxConcurrency: maxWorkers, // Số tab mở đồng thời từ bên ngoài
+            puppeteerOptions: {
+                ...browserOptions,
+                // Thêm connection pooling
+                protocolTimeout: 120000,
+                slowMo: 0, // Không delay để không ảnh hưởng logic chờ IP
+            },
             monitor: true, // Bật monitor để theo dõi tiến trình
-            timeout: 120000, // Timeout cho mỗi task
-            retryLimit: 1, // Số lần thử lại nếu fail
-            retryDelay: 1000, // Delay giữa các lần thử lại
+            timeout: 120000, // Tăng timeout lên 120 giây để đợi IP thay đổi
+            retryLimit: 2, // Giữ retry limit hợp lý
+            retryDelay: 1000, // Giữ delay hợp lý
+            sameDomainDelay: 1000, // Delay giữa các request cùng domain
+            skipDuplicateUrls: true, // Bỏ qua URL trùng lặp
         });
 
         // Định nghĩa task cho cluster
-        await this.cluster.task(async ({ page, data: url }) => {                   
+        await this.cluster.task(async ({ page, data: url }) => {
             return await this.checkSingleLink(page, url);
         });
+
+        // Debug: Kiểm tra maxConcurrency
+        console.log('Cluster initialized with maxConcurrency:', this.cluster.options.maxConcurrency);
     }
 
     async checkSingleLink(page, url) {
         const startTime = Date.now();
+        
+        // Debug: Kiểm tra số tab đang chạy
+        if (this.cluster && this.cluster.workers) {
+            const activeWorkers = this.cluster.workers.filter(w => w.isBusy).length;
+            console.log('Active workers:', activeWorkers, 'of', this.cluster.options.maxConcurrency);
+        }
+        
         try {
+            // Thêm network throttling để giảm tải mạng
+            await page.setRequestInterception(true);
+            page.on('request', (request) => {
+                // Chặn các resource không cần thiết để giảm tải mạng
+                if (request.resourceType() === 'image' || 
+                    request.resourceType() === 'stylesheet' || 
+                    request.resourceType() === 'font' ||
+                    request.resourceType() === 'media') {
+                    request.abort();
+                } else {
+                    request.continue();
+                }
+            });
+
             await page.goto(url, {
-                waitUntil: 'networkidle2',
-                timeout: 120000 // Tăng timeout lên 120 giây
+                waitUntil: 'networkidle2', // Khôi phục lại networkidle2 để đợi IP thay đổi
+                timeout: 120000 // Tăng timeout lên 120 giây để đợi IP thay đổi
             });
 
             let isLoaded = false;
@@ -70,9 +133,9 @@ class LinkChecker {
                     return isLoaded ? isLoaded.style.display === 'none' : false;
                 });
                 // console.log('Waiting for page to load...');
-                await this.sleep(1000); // Chờ 1 giây trước khi kiểm tra lại
-                timeCheck++;;
-            } while (!isLoaded && timeCheck < 60); // Tăng thời gian chờ lên 60 giây
+                await this.sleep(1000); // Khôi phục lại 1 giây để đợi IP thay đổi
+                timeCheck++;
+            } while (!isLoaded && timeCheck < 60); // Khôi phục lại 60 lần (60 giây) để đợi IP thay đổi
             let old_ip = await page.evaluate(() => {
                 const old_ip = document.querySelector('#oldIp');
                 return old_ip ? old_ip.textContent.trim() : null;
@@ -83,7 +146,7 @@ class LinkChecker {
                 return new_ip ? new_ip.textContent.trim() : null;
             }
             );
-        console.log("url checked:", url, "old_ip:", old_ip, "new_ip:", new_ip);
+            console.log("url checked:", url, "old_ip:", old_ip, "new_ip:", new_ip);
             if (!new_ip || !old_ip) {
                 return {
                     url,
@@ -97,7 +160,7 @@ class LinkChecker {
             }
             new_ip = new_ip.split(':')[1].trim();
             old_ip = old_ip.split(':')[1].trim();
-            
+
             const hasSuccess = old_ip !== new_ip; // Kiểm tra nội dung HTML để xác định thành công
             // check new ip có phải dạng 1 ip không
             const isIP = new_ip.match(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/);
@@ -132,14 +195,56 @@ class LinkChecker {
         }
     }
 
-    async checkBatch(urls) {
-        // Queue tất cả các URLs và thu thập kết quả
-        const results = await Promise.all(
-            urls.map(url => this.cluster.execute(url))
-        ).catch(error => {
-            console.error('Error checking batch:', error);
-            return [];
+    async checkBatch(urls, onProgress = null) {
+        // Xử lý tất cả URLs cùng lúc, cluster tự quản lý concurrency
+        const results = [];
+        
+        // Debug: Kiểm tra số URLs và maxConcurrency
+        console.log('Processing URLs:', urls.length, 'with maxConcurrency:', this.cluster ? this.cluster.options.maxConcurrency : 'Cluster not initialized');
+        
+        // Tạo promises cho tất cả URLs
+        const promises = urls.map(async (url, index) => {
+            try {
+                const result = await this.cluster.execute(url);
+                // Gọi callback ngay khi có kết quả
+                if (onProgress) {
+                    onProgress(result, index);
+                }
+                return result;
+            } catch (error) {
+                const errorResult = {
+                    url,
+                    success: false,
+                    status: 'error',
+                    statusText: '❌ Lỗi: ' + error.message,
+                    time: '0.00'
+                };
+                // Gọi callback ngay khi có lỗi
+                if (onProgress) {
+                    onProgress(errorResult, index);
+                }
+                return errorResult;
+            }
         });
+        
+        // Đợi tất cả hoàn thành
+        const allResults = await Promise.allSettled(promises);
+        
+        // Lấy kết quả từ Promise.allSettled
+        allResults.forEach(result => {
+            if (result.status === 'fulfilled') {
+                results.push(result.value);
+            } else {
+                results.push({
+                    url: 'unknown',
+                    success: false,
+                    status: 'error',
+                    statusText: '❌ Lỗi: ' + result.reason,
+                    time: '0.00'
+                });
+            }
+        });
+        
         return results;
     }
 

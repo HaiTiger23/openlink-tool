@@ -59,28 +59,27 @@ app.whenReady().then(async () => {
   }
   createWindow();
 
-  // Khởi tạo Link Checker
+  // Khởi tạo Link Checker với số tab đồng thời
+  let maxConcurrency = 50; // Số tab mở đồng thời (không phải worker) - khớp với HTML
   await linkChecker.initialize({
-    maxConcurrency: 10
+    maxConcurrency: maxConcurrency
   });
-  let maxConcurrency = 10;
 
   ipcMain.handle('set-max-concurrency', async (event, value) => {
-    if (typeof value === 'number' && value > 0 && value <= 50) {
+    console.log('Renderer gửi maxConcurrency:', value);
+    if (typeof value === 'number' && value > 0 && value <= 50) { // Tăng giới hạn lên 100
       maxConcurrency = value;
+      console.log('Main.js nhận maxConcurrency:', maxConcurrency);
       // Khởi tạo lại cluster với maxConcurrency mới
       await linkChecker.cleanup();
       await linkChecker.initialize({ maxConcurrency });
+      console.log('Cluster đã được khởi tạo lại với maxConcurrency:', maxConcurrency);
       return { success: true };
     }
-    return { success: false, message: 'Giá trị không hợp lệ' };
+    return { success: false, message: 'Giá trị không hợp lệ (1-50). Đây là số tab mở đồng thời' };
   });
 
-  // Khi app ready, khởi tạo cluster lần đầu
-  app.whenReady().then(async () => {
-    await linkChecker.initialize({ maxConcurrency });
-    // ...existing code...
-  });
+  // Xóa đoạn code trùng lặp khởi tạo cluster
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -115,7 +114,17 @@ ipcMain.handle('link:check', async (event, url) => {
 });
 
 ipcMain.handle('links:checkMultiple', async (event, urls) => {
-  return await linkChecker.checkBatch(urls);
+  return new Promise((resolve) => {
+    const results = [];
+    
+    linkChecker.checkBatch(urls, (result, index) => {
+      // Gửi kết quả ngay khi có
+      event.sender.send('link:progress', { result, index });
+      results.push(result);
+    }).then(() => {
+      resolve(results);
+    });
+  });
 });
 
 // Proxy handlers

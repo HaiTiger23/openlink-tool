@@ -20,16 +20,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const maxConcurrencyInput = document.getElementById('maxConcurrency');
     const saveSettingBtn = document.getElementById('saveSetting');
 
-    // Sự kiện lưu số worker tối đa
+    // Sự kiện lưu số tab mở đồng thời
     saveSettingBtn.addEventListener('click', async () => {
         const value = parseInt(maxConcurrencyInput.value, 10);
+        console.log('Renderer nhận giá trị từ input:', value);
         if (isNaN(value) || value < 1 || value > 50) {
-            addLog('Giá trị số tiến trình tối đa không hợp lệ (1-50)');
+            addLog('Giá trị số tab mở đồng thời không hợp lệ (1-50)');
             return;
         }
+        console.log('Renderer gửi setMaxConcurrency:', value);
         const result = await window.electronAPI.setMaxConcurrency(value);
+        console.log('Renderer nhận kết quả từ main:', result);
         if (result.success) {
-            addLog(`Đã cập nhật số tiến trình tối đa: ${value}`);
+            addLog(`Đã cập nhật số tab mở đồng thời: ${value}`);
         } else {
             addLog(`Không thể cập nhật: ${result.message || 'Lỗi không xác định'}`);
         }
@@ -113,30 +116,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         addLog(`Bắt đầu kiểm tra ${selectedLinks.length} link đã chọn...`);
         
-        // Update status to checking
-        selectedLinks.forEach( async (link) => {
-             try {
+        // Sử dụng real-time update thay vì đợi toàn bộ
+        try {
+            // Update status to checking
+            selectedLinks.forEach(link => {
                 link.status = 'checking';
                 link.statusText = '⏳ Đang kiểm tra...';
-                updateTable();
-                
-                const result = await checkLink(link.url);
-                console.log("Kết quả", result);
-                
-                link.status = result.status;
-                link.statusText = result.statusText;
-                link.time = result.time;
-                link.old_ip = result.old_ip || '';
-                link.new_ip = result.new_ip || '';
-                updateTable();
-                addLog(`Kiểm tra xong: ${link.url} - ${link.statusText} ${result.error ? ` - ${JSON.stringify(result.error)}` : ''}`);
-            } catch (error) {
-                links[index].status = 'error';
-                links[index].statusText = `❌ Lỗi: ${error.message}`;
-                updateTable();
-                addLog(`Lỗi khi kiểm tra: ${error.message}`);
-            }
-        });
+            });
+            updateTable();
+            
+            // Sử dụng checkMultipleLinks với callback để update real-time
+            await checkMultipleLinks(selectedLinks.map(link => link.url), (result, index) => {
+                // Update ngay khi có kết quả
+                const link = selectedLinks[index];
+                if (link) {
+                    link.status = result.status;
+                    link.statusText = result.statusText;
+                    link.time = result.time;
+                    link.old_ip = result.old_ip || '';
+                    link.new_ip = result.new_ip || '';
+                    
+                    // Update table ngay lập tức
+                    updateTable();
+                    addLog(`✅ Hoàn thành: ${link.url} - ${result.statusText}`);
+                }
+            });
+            
+            addLog(`🎉 Đã hoàn thành kiểm tra ${selectedLinks.length} link`);
+        } catch (error) {
+            // Update status to error for all selected links
+            selectedLinks.forEach(link => {
+                link.status = 'error';
+                link.statusText = '❌ Lỗi khi kiểm tra';
+            });
+            updateTable();
+            addLog(`❌ Lỗi khi kiểm tra hàng loạt: ${error.message}`);
+        }
         // try {
         //     // Process links in parallel using checkMultipleLinks
         //     const results = await checkMultipleLinks(selectedLinks.map(link => link.url));
