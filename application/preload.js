@@ -2,7 +2,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
     getClusterInfo: async () => ipcRenderer.invoke('cluster:getInfo'),
-      setMaxConcurrency: (value) => ipcRenderer.invoke('set-max-concurrency', value),
+    setMaxConcurrency: (value) => ipcRenderer.invoke('set-max-concurrency', value),
+    
     // File operations
     openFile: async () => ipcRenderer.invoke('dialog:openFile'),
     saveFile: async () => ipcRenderer.invoke('dialog:saveFile'),
@@ -18,7 +19,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
             throw new Error(`Error checking link: ${error.message}`);
         }
     },
-    
+
     checkMultipleLinks: async (links) => {
         try {
             return await ipcRenderer.invoke('links:checkMultiple', links);

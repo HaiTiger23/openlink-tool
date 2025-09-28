@@ -10,7 +10,7 @@ class LinkChecker {
 
     async initialize(options = {}) {
         const browserOptions = {
-            executablePath: "D:\\tool\\openlink\\application\\chrome-headless-shell\\win64-138.0.7204.168\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+            // executablePath: "D:\\tool\\openlink\\application\\chrome-headless-shell\\win64-138.0.7204.168\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
             headless: false,           // Chạy headless
             defaultViewport: null,     // Không fix viewport
 
@@ -27,6 +27,8 @@ class LinkChecker {
                 '--hide-scrollbars',           // Ẩn scrollbar (tăng nhẹ hiệu năng)
                 '--mute-audio',                // Tắt audio
                 '--disable-dev-shm-usage',     // Fix lỗi bộ nhớ trên Linux/Docker
+                '--disable-web-security',      // Tắt web security để tránh CORS
+                '--disable-features=VizDisplayCompositor' // Tắt một số tính năng không cần thiết
             ]
         };
 
@@ -134,7 +136,10 @@ class LinkChecker {
         // Queue tất cả các URLs và thu thập kết quả
         const results = await Promise.all(
             urls.map(url => this.cluster.execute(url))
-        );
+        ).catch(error => {
+            console.error('Error checking batch:', error);
+            return [];
+        });
         return results;
     }
 
