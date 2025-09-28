@@ -42,23 +42,6 @@ class LinkChecker {
                 '--disable-features=TranslateUI', // Tắt translate UI
                 '--aggressive-cache-discard', // Aggressive cache discard
                 '--memory-pressure-off', // Tắt memory pressure
-                '--max_old_space_size=4096', // Tăng heap size
-                // Network throttling để giảm tải mạng
-                '--disable-background-networking', // Tắt background networking
-                '--disable-background-timer-throttling', // Tắt background timer
-                '--disable-renderer-backgrounding', // Tắt renderer backgrounding
-                '--disable-backgrounding-occluded-windows', // Tắt backgrounding occluded windows
-                '--disable-features=TranslateUI', // Tắt translate UI
-                '--disable-ipc-flooding-protection', // Tắt IPC flooding protection
-                '--disable-hang-monitor', // Tắt hang monitor
-                '--disable-prompt-on-repost', // Tắt prompt on repost
-                '--disable-domain-reliability', // Tắt domain reliability
-                '--disable-component-extensions-with-background-pages', // Tắt component extensions
-                '--disable-client-side-phishing-detection', // Tắt phishing detection
-                '--disable-sync-preferences', // Tắt sync preferences
-                '--disable-features=TranslateUI', // Tắt translate UI
-                '--aggressive-cache-discard', // Aggressive cache discard
-                '--memory-pressure-off', // Tắt memory pressure
                 '--max_old_space_size=4096' // Tăng heap size
             ]
         };
